@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
+.dingtalk_token_cache.json
+.gv-office-data/
+gvOffice/config.json
+gvOffice/workflows/
+config.local.json
+*.local.json

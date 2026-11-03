@@ -1,0 +1,6 @@
+interface:
+  display_name: "gvOffice"
+  short_description: "个人日常办公工作流编排"
+  default_prompt: "Use $gv-office to handle my daily office workflow."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "backend": "dws",
+  "source": {
+    "shortcutNodeId": "example-shortcut-node-id",
+    "sheetNodeId": "example-sheet-node-id",
+    "url": "https://alidocs.dingtalk.com/i/nodes/example-shortcut-node-id"
+  },
+  "identity": {
+    "userId": "example-user-id",
+    "userName": "示例用户"
+  },
+  "dailyTemplate": {
+    "templateId": "example-template-id",
+    "templateName": "日报"
+  },
+  "referenceSheetTitle": "2026年10月",
+  "previewRequired": true
+}

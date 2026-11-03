@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "timeZone": "Asia/Shanghai",
+  "dws": {
+    "profile": "example-corp-id:example-user-id",
+    "corpId": "example-corp-id",
+    "corpName": "示例组织",
+    "userId": "example-user-id",
+    "userName": "示例用户"
+  }
+}

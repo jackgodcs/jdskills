@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "backend": "dws",
+  "source": {
+    "shortcutNodeId": "example-shortcut-node-id",
+    "sheetNodeId": "example-sheet-node-id",
+    "url": "https://alidocs.dingtalk.com/i/nodes/example-shortcut-node-id"
+  },
+  "template": {
+    "nodeId": "example-template-node-id",
+    "url": "https://alidocs.dingtalk.com/i/nodes/example-template-node-id"
+  },
+  "targetFolder": {
+    "nodeId": "example-folder-node-id"
+  },
+  "host": "示例主持人",
+  "generatedReports": {}
+}
