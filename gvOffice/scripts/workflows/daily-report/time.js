@@ -30,4 +30,16 @@ export function calculateSchedule(reportDate, confirmedAt) {
   return { reportDate, confirmedAt: confirmed.toISOString(), scheduledAt: scheduled.toISOString(), timeZone: ZONE, rule };
 }
 
+export function resolveDelivery(policy, reportDate, confirmedAt, specifiedAt) {
+  const confirmed = new Date(confirmedAt);
+  if (Number.isNaN(confirmed.getTime())) throw new Error('confirmedAt 必须是有效且带时区的时间');
+  if (policy === 'immediate') return { policy, reportDate, confirmedAt: confirmed.toISOString(), scheduledAt: confirmed.toISOString(), timeZone: ZONE, rule: 'confirmed-immediately' };
+  if (policy === 'rule-based') return { policy, ...calculateSchedule(reportDate, confirmedAt) };
+  if (policy !== 'specified') throw new Error(`未知发送策略 ${policy}`);
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(specifiedAt || '')) throw new Error('specifiedAt 必须为 YYYY-MM-DD HH:mm（Asia/Shanghai）');
+  const scheduled = new Date(`${specifiedAt.replace(' ', 'T')}:00${OFFSET}`);
+  if (Number.isNaN(scheduled.getTime()) || scheduled <= confirmed) throw new Error('指定发送时间必须晚于确认时间');
+  return { policy, reportDate, confirmedAt: confirmed.toISOString(), scheduledAt: scheduled.toISOString(), timeZone: ZONE, rule: 'user-specified' };
+}
+
 export function isReportDateSafe(reportDate, executionTime = new Date()) { return reportDate === shanghaiDate(executionTime); }

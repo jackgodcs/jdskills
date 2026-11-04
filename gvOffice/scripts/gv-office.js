@@ -7,7 +7,7 @@ const [workflow = 'help', command = 'help', ...argv] = process.argv.slice(2);
 function print(value) { process.stdout.write(`${JSON.stringify(value, null, 2)}\n`); }
 
 async function main() {
-  if (workflow === 'help') return print({ workflows: { 'daily-report': ['gate', 'setup', 'defaults', 'template-select', 'verify', 'templates', 'template', 'schedule', 'config-set', 'receivers-set', 'receiver-add', 'receiver-remove', 'config-show', 'profiles', 'login', 'profile-switch'], 'department-weekly-report': ['gate', 'config-set', 'config-show', 'inspect', 'target-record'], 'personal-weekly-report': ['gate', 'setup', 'config-show', 'inspect'] } });
+  if (workflow === 'help') return print({ workflows: { 'daily-report': ['gate', 'setup', 'defaults', 'contents', 'delivery-policy-show', 'delivery-policy-set', 'delivery-resolve', 'template-select', 'verify', 'templates', 'template', 'schedule', 'config-set', 'receivers-set', 'receiver-add', 'receiver-remove', 'config-show', 'profiles', 'login', 'profile-switch'], 'department-weekly-report': ['gate', 'config-set', 'config-show', 'inspect', 'target-record'], 'personal-weekly-report': ['gate', 'setup', 'config-show', 'inspect'] } });
   if (workflow === 'daily-report') return dailyReport(command, argv);
   if (workflow === 'department-weekly-report') return departmentWeeklyReport(command, argv);
   if (workflow === 'personal-weekly-report') return personalWeeklyReport(command, argv);

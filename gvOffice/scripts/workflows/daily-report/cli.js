@@ -1,6 +1,14 @@
-import { calculateSchedule } from './time.js';
+import { calculateSchedule, resolveDelivery } from './time.js';
 import { callDws, currentProfile, dwsGate, listProfiles, login, switchProfile } from '../../shared/dws.js';
 import { loadConfig, saveConfig } from '../../shared/store.js';
+
+export const DEFAULT_DAILY_REPORT_TEMPLATE = { templateId: '14eade35f619cdbcee39df04266a2811', templateName: '日报' };
+const DEFAULT_FIELD_ORDER = ['日期', '今日完成工作', '近期需完成工作', '公司产品、客户反馈、市场竞争信息', '需协调工作'];
+const DELIVERY_POLICIES = [
+  { id: 'immediate', name: '确认后立即发送', recommended: true },
+  { id: 'specified', name: '每篇指定日期和时间', requiredFormat: 'YYYY-MM-DD HH:mm' },
+  { id: 'rule-based', name: '按约定规则发送', rules: ['当天日报：21:29', '历史日报：21:15前确认则当天21:29', '历史日报：21:15及以后确认则确认后15分钟', '未来日报：对应日期21:29'] }
+];
 
 function print(value) { process.stdout.write(`${JSON.stringify(value, null, 2)}\n`); }
 function parse(argv) { return Object.fromEntries(argv.reduce((all, value, index) => value.startsWith('--') ? [...all, [value.slice(2), argv[index + 1]?.startsWith('--') ? true : argv[index + 1]]] : all, [])); }
@@ -23,6 +31,14 @@ export function previousUpcomingWork(report, templateName) {
   const content = typeof field?.value === 'string' ? field.value.trim() : '';
   return content ? { content, reportId: report.reportId, templateName: report.templateName, source: 'previous-report' } : null;
 }
+export function buildDefaultDailyReportContents(fields, values) {
+  const byName = new Map((fields || []).map(field => [field.name, field]));
+  return DEFAULT_FIELD_ORDER.map(name => {
+    const field = byName.get(name);
+    if (!field) throw new Error(`默认日报模板缺少字段“${name}”`);
+    return { key: name, sort: field.sort, content: name === '日期' ? values.reportDate : values[name] || '', contentType: field.type === 1 ? 'markdown' : 'origin', type: field.type };
+  });
+}
 async function saveTemplate(template, source) {
   const current = await loadConfig('daily-report') || { schemaVersion: 1, backend: 'dws', receivers: [], schedulingPreference: ['native', 'agent-scheduled'] };
   const detail = await callDws(['report', 'template', 'get', '--name', template.templateName]);
@@ -37,6 +53,8 @@ async function setupTemplate() {
     const matched = available.find(template => template.templateId === current.templateId);
     if (matched) return { configured: true, source: 'existing-config', workflow: await saveTemplate(matched, current.templateSource || 'existing-config') };
   }
+  const recommended = available.find(template => template.templateId === DEFAULT_DAILY_REPORT_TEMPLATE.templateId && template.templateName === DEFAULT_DAILY_REPORT_TEMPLATE.templateName);
+  if (recommended) return { configured: true, firstRun: true, source: 'default-template', recommendation: { ...recommended, message: '首次使用默认推荐“日报”模板；如需其它模板，可从 alternatives 中选择。' }, alternatives: available.filter(template => template.templateId !== recommended.templateId), workflow: await saveTemplate(recommended, 'default-template') };
   let latest;
   let latestError;
   try { latest = await callDws(['report', '+report-latest']); } catch (error) { latestError = error.message; }
@@ -48,7 +66,7 @@ async function setupTemplate() {
 
 export async function dailyReport(command, argv) {
   const options = parse(argv);
-  if (command === 'help') return print({ commands: ['gate', 'setup', 'defaults', 'template-select --template-id ID', 'verify', 'templates', 'template --name NAME', 'schedule --report-date YYYY-MM-DD --confirmed-at ISO', 'config-set --template-id ID --template-name NAME [--receiver-user-ids CSV] [--receiver-names CSV]', 'receivers-set --receiver-user-ids CSV [--receiver-names CSV] --confirm-receivers true', 'receiver-add --user-id ID [--name NAME] --confirm-receivers true', 'receiver-remove --user-id ID --confirm-receivers true', 'config-show', 'profiles', 'login [--intl true]', 'profile-switch --profile SELECTOR --confirm-switch true'] });
+  if (command === 'help') return print({ commands: ['gate', 'setup', 'defaults', 'contents --report-date YYYY-MM-DD --today-work TEXT --upcoming-work TEXT [--product-feedback TEXT] [--coordination TEXT]', 'delivery-policy-show', 'delivery-policy-set --policy immediate|specified|rule-based --confirm-policy true', 'delivery-resolve --report-date YYYY-MM-DD --confirmed-at ISO [--specified-at YYYY-MM-DD HH:mm]', 'template-select --template-id ID', 'verify', 'templates', 'template --name NAME', 'schedule --report-date YYYY-MM-DD --confirmed-at ISO', 'config-set --template-id ID --template-name NAME [--receiver-user-ids CSV] [--receiver-names CSV]', 'receivers-set --receiver-user-ids CSV [--receiver-names CSV] --confirm-receivers true', 'receiver-add --user-id ID [--name NAME] --confirm-receivers true', 'receiver-remove --user-id ID --confirm-receivers true', 'config-show', 'profiles', 'login [--intl true]', 'profile-switch --profile SELECTOR --confirm-switch true'] });
   if (command === 'profiles') return print(await listProfiles());
   if (command === 'login') return print(await login(options.intl === 'true'));
   if (command === 'profile-switch') {
@@ -75,7 +93,9 @@ export async function dailyReport(command, argv) {
   if (command === 'gate') return print(gate);
   if (command === 'setup') {
     if (!shared) await saveConfig({ schemaVersion: 1, timeZone: 'Asia/Shanghai', dws: gate.profile, updatedAt: new Date().toISOString() });
-    return print({ ...gate, template: await setupTemplate() });
+    const template = await setupTemplate();
+    const workflow = await loadConfig('daily-report');
+    return print({ ...gate, template, deliveryPolicy: workflow?.deliveryPolicy ? { configured: true, selected: workflow.deliveryPolicy } : { configured: false, selectionRequired: true, recommendation: 'immediate', options: DELIVERY_POLICIES } });
   }
   if (command === 'template-select') {
     const templateId = required(options, 'template-id');
@@ -90,6 +110,30 @@ export async function dailyReport(command, argv) {
     const latest = await callDws(['report', '+report-latest', '--keyword', workflow.templateName]);
     const value = previousUpcomingWork(latest?.data?.report, workflow.templateName);
     return print({ field: '近期需完成工作', available: Boolean(value), ...(value ? { value } : { reason: '最近一次同模板日志中没有可继承的内容' }) });
+  }
+  if (command === 'contents') {
+    const workflow = await loadConfig('daily-report');
+    if (workflow?.templateId !== DEFAULT_DAILY_REPORT_TEMPLATE.templateId) throw new Error('contents 命令只适用于默认“日报”模板；当前已选择其它模板，请按其真实字段构造内容');
+    return print({ templateId: workflow.templateId, templateName: workflow.templateName, omittedFields: ['图片', '附件'], contents: buildDefaultDailyReportContents(workflow.templateFields, { reportDate: required(options, 'report-date'), '今日完成工作': required(options, 'today-work'), '近期需完成工作': required(options, 'upcoming-work'), '公司产品、客户反馈、市场竞争信息': options['product-feedback'] || '', '需协调工作': options.coordination || '' }) });
+  }
+  if (command === 'delivery-policy-show') {
+    const workflow = await loadConfig('daily-report');
+    return print({ configured: Boolean(workflow?.deliveryPolicy), selected: workflow?.deliveryPolicy || null, recommendation: 'immediate', options: DELIVERY_POLICIES });
+  }
+  if (command === 'delivery-policy-set') {
+    const policy = required(options, 'policy');
+    if (!DELIVERY_POLICIES.some(item => item.id === policy)) throw new Error(`未知发送策略 ${policy}`);
+    const current = await loadConfig('daily-report');
+    if (!current) throw new Error('日报工作流尚未配置，请先运行 setup');
+    if (options['confirm-policy'] !== 'true') return print({ confirmationRequired: true, current: current.deliveryPolicy || null, next: policy, detail: DELIVERY_POLICIES.find(item => item.id === policy) });
+    const workflow = { ...current, deliveryPolicy: policy, updatedAt: new Date().toISOString() };
+    await saveConfig(workflow, 'daily-report');
+    return print({ updated: true, deliveryPolicy: policy });
+  }
+  if (command === 'delivery-resolve') {
+    const workflow = await loadConfig('daily-report');
+    if (!workflow?.deliveryPolicy) throw new Error('尚未配置默认发送策略，请先运行 delivery-policy-set 并确认');
+    return print(resolveDelivery(workflow.deliveryPolicy, required(options, 'report-date'), required(options, 'confirmed-at'), options['specified-at']));
   }
   if (['receivers-set', 'receiver-add', 'receiver-remove'].includes(command)) {
     const current = await loadConfig('daily-report');
