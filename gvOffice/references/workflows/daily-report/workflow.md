@@ -31,6 +31,8 @@
 
 默认“日报”运行 `daily-report contents` 构造已验证的固定字段顺序，图片和附件无内容时省略。提交后必须取得 `reportId` 并回读日期、正文和顺序；失败时不得自动换参重试。定时提交仍使用一次性 [Agent 定时 fallback](agent-scheduled.md)。
 
+本工作流的 Report 命令、模板字段和回读契约已经固化。日常生成预览、立即提交、定时提交和发送结果核对均直接执行本 reference，不重复查询 DWS 文档、Schema 或 Help。契约外错误停止并报告；只有用户要求开发或修订日报实现时才重新核查能力。
+
 发送前运行 `daily-report delivery-resolve`。`specified` 与 `rule-based` 都由 gvOffice/Agent 创建一次性定时任务，不得称为钉钉原生定时发送。
 
 修改已安排日志时先取消旧计划，再重新预览和确认。Agent fallback 在执行前删除对应定时任务即取消；删除成功前不得创建替代任务。

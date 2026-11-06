@@ -45,4 +45,4 @@ node scripts/gv-office.js department-weekly-report inspect [--date YYYY-MM-DD]
 3. JSONML 覆盖使用读取所得 revision 做并发检查。复制模板或完整保留样式不可用时停止，不降级为无格式 Markdown/纯文本。
 4. 写后重新 `doc +fetch --detail full`，验证标题/正文日期、人员和关键章节，并用 `target-record` 记录真实目标。回执说明取数周期、源列、新建或覆盖、文档链接及异常强制放行情况。
 
-Agent 在实施写入前按 `dingtalk-doc` 和 `dingtalk-drive` 的当前 DWS 契约执行。该工作流的“数据完整时直接生成”是用户对正常路径的持续授权；目标、组织、模板或周期无法验证时不得扩张授权。
+Doc、Drive 和 Sheet 调用契约已经固化。日常取数、生成、覆盖和结果回读直接按本 reference 执行，不在每次生成部门周报时重新查询 DWS 文档、Schema 或 Help。契约外错误停止并报告；只有用户要求开发或修订部门周报实现时才重新核查能力。该工作流的“数据完整时直接生成”是用户对正常路径的持续授权；目标、组织、模板或周期无法验证时不得扩张授权。

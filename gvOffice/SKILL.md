@@ -21,7 +21,7 @@ description: 个人日常办公编排 Skill。使用明确入口识别并执行�
 
 进入任何依赖脚本或钉钉的工作流后，先按 [运行环境门禁](references/shared/runtime-gate.md) 检测 Node.js、DWS、登录和组织，再加载工作流说明。门禁通过前不得调用 gvOffice CLI，也不得根据缓存模板生成业务预览。
 
-涉及钉钉工作流的能力评估、开发、写入或故障归因时，还必须读取 [钉钉官方 API 能力门禁](references/shared/dingtalk-official-api-gate.md)。DWS 只是执行适配层；官方未明确说明但经过受控提交与回读验证的行为只能标记为“实测兼容”，不得扩大推断。
+只有在实现新工作流，或明确进入已有工作流的新能力开发、契约升级和修订阶段时，才读取 [钉钉官方 API 能力门禁](references/shared/dingtalk-official-api-gate.md) 并核查官方文档、DWS Schema 或 Help。`daily-report`、`personal-weekly-report`、`department-weekly-report` 等已经实现并固化契约的工作流，在日常预览、发送、写入和结果回读中直接使用既有契约，不重复执行能力核查。运行时遇到契约外错误应停止并报告；只有用户随后要求修订实现时，才进入开发核查。外部写入仍必须按工作流要求做写前状态核对和写后回读。
 
 当前日报工作流读取 [日报工作流](references/workflows/daily-report/workflow.md)。CLI 统一使用：
 
